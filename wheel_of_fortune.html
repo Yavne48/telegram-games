@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>גלגל המזל - בחירת מסעדה</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f2eb;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: #333;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><path d="M30,10 C40,20 60,20 70,10" stroke="%23d9c7b3" fill="none" stroke-width="0.5"/></svg>');
+            background-size: 100px 100px;
+        }
+
+        .container {
+            text-align: center;
+            margin: 2rem;
+            max-width: 500px;
+        }
+
+        h1 {
+            color: #5d4037;
+            font-weight: normal;
+            margin-bottom: 1.5rem;
+            font-size: 2rem;
+        }
+
+        .wheel-container {
+            position: relative;
+            width: 350px;
+            height: 350px;
+            margin: 2rem auto;
+        }
+
+        .wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            border: 8px solid #5d4037;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            transition: transform 5s cubic-bezier(0.17, 0.67, 0.12, 1);
+            transform: rotate(0deg);
+        }
+
+        .marker {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 40px;
+            background-color: #c62828;
+            clip-path: polygon(50% 0%, 100% 75%, 50% 100%, 0% 75%);
+            z-index: 3;
+        }
+
+        .spin-button {
+            font-family: inherit;
+            margin-top: 2rem;
+            padding: 0.75rem 2rem;
+            background-color: #78909c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: background-color 0.3s;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.1);
+        }
+
+        .spin-button:hover {
+            background-color: #5d4037;
+        }
+
+        .result {
+            margin-top: 1.5rem;
+            font-size: 1.5rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            color: #5d4037;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .result.show {
+            opacity: 1;
+        }
+
+        .settings {
+            margin-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        .custom-options {
+            width: 100%;
+            height: 100px;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            resize: vertical;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .wheel-section {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform-origin: center;
+            font-weight: bold;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .falling-cherry-blossom {
+            position: absolute;
+            top: -50px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="%23fce4ec"/><circle cx="10" cy="10" r="4" fill="%23f8bbd0"/></svg>');
+            background-size: contain;
+            width: 20px;
+            height: 20px;
+            animation: fall linear;
+            z-index: 10;
+        }
+
+        @keyframes fall {
+            to {
+                top: 100vh;
+                transform: rotate(360deg) translateX(100px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>בחירת מסעדה - גלגל המזל</h1>
+        
+        <div class="wheel-container">
+            <div class="marker"></div>
+            <div class="wheel" id="wheel"></div>
+        </div>
+
+        <button class="spin-button" id="spin-button">סובב את הגלגל</button>
+        
+        <div class="result" id="result"></div>
+
+        <div class="settings">
+            <h3>הכנס אפשרויות מותאמות אישית</h3>
+            <textarea class="custom-options" id="custom-options" placeholder="הזן אפשרויות מופרדות בפסיקים (לדוגמה: תאילנדי, איטלקי, המבורגר)">איטלקי, תאילנדי, סושי, מקסיקני, המבורגר, פיצה, טבעוני, דגים, סטייק, מרוקאי</textarea>
+            <button class="spin-button" id="update-options">עדכן אפשרויות</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const wheel = document.getElementById('wheel');
+            const spinButton = document.getElementById('spin-button');
+            const resultDiv = document.getElementById('result');
+            const customOptionsInput = document.getElementById('custom-options');
+            const updateOptionsButton = document.getElementById('update-options');
+            
+            // Default options
+            let options = [
+                'איטלקי',
+                'תאילנדי',
+                'סושי',
+                'מקסיקני',
+                'המבורגר',
+                'פיצה',
+                'טבעוני',
+                'דגים',
+                'סטייק',
+                'מרוקאי'
+            ];
+
+            let isSpinning = false;
+            
+            // Initialize the wheel with default options
+            createWheel(options);
+            
+            spinButton.addEventListener('click', function() {
+                if (isSpinning) return;
+                spinWheel();
+            });
+            
+            updateOptionsButton.addEventListener('click', function() {
+                const newOptionsText = customOptionsInput.value;
+                const newOptions = newOptionsText.split(',').map(option => option.trim()).filter(option => option !== '');
+                
+                if (newOptions.length >= 2) {
+                    options = newOptions;
+                    createWheel(options);
+                    resultDiv.textContent = '';
+                    resultDiv.classList.remove('show');
+                } else {
+                    alert('יש להזין לפחות 2 אפשרויות');
+                }
+            });
+            
+            function createWheel(options) {
+                wheel.innerHTML = '';
+                const sectionAngle = 360 / options.length;
+                
+                // Colors for wheel sections
+                const colors = [
+                    '#795548', '#A1887F', '#8D6E63', '#6D4C41', 
+                    '#5D4037', '#4E342E', '#3E2723', '#4A148C', 
+                    '#6A1B9A', '#7B1FA2', '#8E24AA', '#9C27B0', 
+                    '#AB47BC', '#BA68C8'
+                ];
+                
+                for (let i = 0; i < options.length; i++) {
+                    const section = document.createElement('div');
+                    section.className = 'wheel-section';
+                    section.textContent = options[i];
+                    
+                    // Calculate rotation angle for this section
+                    section.style.transform = `rotate(${i * sectionAngle}deg)`;
+                    
+                    // Set background color
+                    section.style.backgroundColor = colors[i % colors.length];
+                    
+                    // Set clip path to create pie shape
+                    section.style.clipPath = `polygon(50% 0%, 50% 50%, ${50 + 50 * Math.cos(((i+1) * sectionAngle) * Math.PI / 180)}% ${50 + 50 * Math.sin(((i+1) * sectionAngle) * Math.PI / 180)}%, ${50 + 50 * Math.cos((i * sectionAngle) * Math.PI / 180)}% ${50 + 50 * Math.sin((i * sectionAngle) * Math.PI / 180)}%, 50% 50%)`;
+                    
+                    wheel.appendChild(section);
+                }
+            }
+            
+            function spinWheel() {
+                isSpinning = true;
+                
+                // Hide previous result
+                resultDiv.classList.remove('show');
+                
+                // Random number of full rotations (3-6)
+                const fullRotations = 3 + Math.floor(Math.random() * 4);
+                
+                // Random angle for the final stopping position
+                const stopAngle = Math.floor(Math.random() * 360);
+                
+                // Calculate total rotation angle
+                const totalRotation = fullRotations * 360 + stopAngle;
+                
+                // Set CSS transition for the wheel
+                wheel.style.transition = 'transform 5s cubic-bezier(0.17, 0.67, 0.12, 1)';
+                wheel.style.transform = `rotate(${totalRotation}deg)`;
+                
+                // Create cherry blossoms
+                createCherryBlossoms();
+                
+                // Calculate the result after spinning stops
+                setTimeout(() => {
+                    // Calculate which section ends up at the top
+                    const sectionAngle = 360 / options.length;
+                    const finalAngle = stopAngle % 360;
+                    const sectionIndex = Math.floor(finalAngle / sectionAngle);
+                    const result = options[options.length - 1 - sectionIndex];
+                    
+                    // Display the result
+                    resultDiv.textContent = `התוצאה: ${result}`;
+                    resultDiv.classList.add('show');
+                    
+                    isSpinning = false;
+                }, 5000);
+            }
+            
+            function createCherryBlossoms() {
+                for (let i = 0; i < 20; i++) {
+                    setTimeout(() => {
+                        const blossom = document.createElement('div');
+                        blossom.className = 'falling-cherry-blossom';
+                        blossom.style.left = `${Math.random() * 100}%`;
+                        blossom.style.animationDuration = `${5 + Math.random() * 10}s`;
+                        document.body.appendChild(blossom);
+                        
+                        // Remove blossom after animation
+                        setTimeout(() => {
+                            blossom.remove();
+                        }, 15000);
+                    }, i * 300);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
