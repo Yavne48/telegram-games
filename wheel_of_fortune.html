@@ -148,6 +148,60 @@
                 transform: rotate(360deg) translateX(100px);
             }
         }
+        
+        .recent-options {
+            margin-top: 1.5rem;
+            width: 100%;
+        }
+        
+        .recent-option {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .delete-option {
+            background-color: #c62828;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            margin-left: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .option-text {
+            flex-grow: 1;
+            text-align: right;
+        }
+        
+        .add-option-container {
+            display: flex;
+            width: 100%;
+            margin-top: 1rem;
+        }
+        
+        .add-option-input {
+            flex-grow: 1;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 5px 0 0 5px;
+            font-family: inherit;
+        }
+        
+        .add-option-button {
+            padding: 0.5rem 1rem;
+            background-color: #5d4037;
+            color: white;
+            border: none;
+            border-radius: 0 5px 5px 0;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -164,9 +218,13 @@
         <div class="result" id="result"></div>
 
         <div class="settings">
-            <h3>הכנס אפשרויות מותאמות אישית</h3>
-            <textarea class="custom-options" id="custom-options" placeholder="הזן אפשרויות מופרדות בפסיקים (לדוגמה: תאילנדי, איטלקי, המבורגר)">איטלקי, תאילנדי, סושי, מקסיקני, המבורגר, פיצה, טבעוני, דגים, סטייק, מרוקאי</textarea>
-            <button class="spin-button" id="update-options">עדכן אפשרויות</button>
+            <h3>האפשרויות שלך</h3>
+            <div id="options-list" class="recent-options"></div>
+            
+            <div class="add-option-container">
+                <input type="text" id="add-option-input" class="add-option-input" placeholder="הוסף אפשרות חדשה...">
+                <button id="add-option-button" class="add-option-button">הוסף</button>
+            </div>
         </div>
     </div>
 
@@ -175,11 +233,12 @@
             const wheel = document.getElementById('wheel');
             const spinButton = document.getElementById('spin-button');
             const resultDiv = document.getElementById('result');
-            const customOptionsInput = document.getElementById('custom-options');
-            const updateOptionsButton = document.getElementById('update-options');
+            const optionsList = document.getElementById('options-list');
+            const addOptionInput = document.getElementById('add-option-input');
+            const addOptionButton = document.getElementById('add-option-button');
             
             // Default options
-            let options = [
+            const defaultOptions = [
                 'איטלקי',
                 'תאילנדי',
                 'סושי',
@@ -192,29 +251,77 @@
                 'מרוקאי'
             ];
 
+            // Load options from localStorage or use defaults
+            let options = JSON.parse(localStorage.getItem('wheelOptions')) || defaultOptions;
+            
             let isSpinning = false;
             
-            // Initialize the wheel with default options
+            // Initialize
             createWheel(options);
+            updateOptionsList();
             
             spinButton.addEventListener('click', function() {
                 if (isSpinning) return;
                 spinWheel();
             });
             
-            updateOptionsButton.addEventListener('click', function() {
-                const newOptionsText = customOptionsInput.value;
-                const newOptions = newOptionsText.split(',').map(option => option.trim()).filter(option => option !== '');
-                
-                if (newOptions.length >= 2) {
-                    options = newOptions;
-                    createWheel(options);
-                    resultDiv.textContent = '';
-                    resultDiv.classList.remove('show');
-                } else {
-                    alert('יש להזין לפחות 2 אפשרויות');
+            addOptionButton.addEventListener('click', addNewOption);
+            addOptionInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    addNewOption();
                 }
             });
+            
+            function addNewOption() {
+                const newOption = addOptionInput.value.trim();
+                
+                if (newOption && !options.includes(newOption)) {
+                    options.push(newOption);
+                    saveOptions();
+                    createWheel(options);
+                    updateOptionsList();
+                    addOptionInput.value = '';
+                }
+            }
+            
+            function deleteOption(index) {
+                options.splice(index, 1);
+                
+                // Make sure we have at least 2 options
+                if (options.length < 2) {
+                    options = defaultOptions;
+                }
+                
+                saveOptions();
+                createWheel(options);
+                updateOptionsList();
+            }
+            
+            function saveOptions() {
+                localStorage.setItem('wheelOptions', JSON.stringify(options));
+            }
+            
+            function updateOptionsList() {
+                optionsList.innerHTML = '';
+                
+                options.forEach((option, index) => {
+                    const optionElement = document.createElement('div');
+                    optionElement.className = 'recent-option';
+                    
+                    const deleteButton = document.createElement('button');
+                    deleteButton.className = 'delete-option';
+                    deleteButton.innerHTML = '×';
+                    deleteButton.addEventListener('click', () => deleteOption(index));
+                    
+                    const optionText = document.createElement('div');
+                    optionText.className = 'option-text';
+                    optionText.textContent = option;
+                    
+                    optionElement.appendChild(deleteButton);
+                    optionElement.appendChild(optionText);
+                    optionsList.appendChild(optionElement);
+                });
+            }
             
             function createWheel(options) {
                 wheel.innerHTML = '';
